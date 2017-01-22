@@ -134,49 +134,6 @@ def LocalConstrastNormalization(img):
 def GlobalConstrastNormalize(img_in):
     return exposure.equalize_hist(img_in)
 
-
-# index = random.randint(0, len(X_train))
-# image = X_train[index].squeeze()
-
-# plt.figure(figsize=(1,1))
-# plt.imshow(image)
-# plt.show()
-
-# yuv_img = RGB2YUV2(image)
-# plt.figure(figsize=(1,1))
-# plt.imshow(yuv_img)
-# plt.show()
-# print('Just how yuv')
-
-
-# grayscale_img = grayscaleImage(yuv_img)
-# plt.figure(figsize=(1,1))
-# plt.imshow(grayscale_img, cmap="Greys_r")
-# plt.show()
-# print('Just how grayscale')
-
-
-# global_constrast_img = yuv_img
-# global_constrast_img[:,:,0] = GlobalConstrastNormalize(yuv_img)[:,:,0]
-# plt.figure(figsize=(1,1))
-# plt.imshow(global_constrast_img)
-# plt.show()
-# print('Just how global_constrast')
-
-# local_constrast_img = global_constrast_img
-# local_constrast_img[:,:,0] = GlobalConstrastNormalize(global_constrast_img)[:,:,0]
-# plt.figure(figsize=(1,1))
-# plt.imshow(local_constrast_img)
-# plt.show()
-# print('Just how local_constrast')
-
-# grayscale_img = grayscaleImage(local_constrast_img)
-# plt.figure(figsize=(1,1))
-# plt.imshow(grayscale_img, cmap="Greys_r")
-# plt.show()
-# print('Just how grayscale')
-
-
 def preprocess_image(img_in):
     yuv_img = RGB2YUV2(img_in)
     global_constrast_img = yuv_img
@@ -204,22 +161,25 @@ def preprocess_image_test(train_input):
     plt.show()
 #preprocess_image_test(X_train)
 
-# def preprocess_images(train_input):
-#     for index in range(10):
-#         train_input[index] = preprocess_image(train_input[index])
-#         plt.imshow(train_input[index])
-#         plt.show()
-#     return train_input
+def preprocess_images(train_input):
+    new_train_input = []
+    for index in range(10):
+        new_train_input.append(preprocess_image(train_input[index]))
+        plt.imshow(new_train_input[index])
+        plt.show()
+    return new_train_input
 
-# preprocess_images(X_train)
-# index = random.randint(0, len(X_train))
-# image = X_train[index].squeeze()
-# plt.figure(figsize=(1,1))
-# plt.imshow(image, cmap="Greys_r")
-# plt.show()
+#print(X_train)
+#print(X_train[0].shape)
+X_train = preprocess_images(X_train)
+index = random.randint(0, len(X_train))
+image = X_train[index].squeeze()
+plt.figure(figsize=(1,1))
+plt.imshow(image, cmap="Greys_r")
+plt.show()
 
 
-
+'''
 
 # Shuffle the data
 from sklearn.utils import shuffle
@@ -232,6 +192,8 @@ from sklearn.model_selection import train_test_split
 
 X_train,X_validation,y_train,y_validation = train_test_split(X_train,y_train,test_size=0.4,random_state=0)
 
+
+# The model
 from tensorflow.contrib.layers import flatten
 
 def LeNet(x):    
@@ -287,15 +249,14 @@ def LeNet(x):
     
     return logits
 
-print('done')
 
+# Train
 import tensorflow as tf
 ### Train your model here.
 ### Feel free to use as many code cells as needed.
 #x is a placeholder for a batch of input images. y is a placeholder for a batch of output labels.
 x = tf.placeholder(tf.float32, (None, 32, 32, 3))
 y = tf.placeholder(tf.int32, (None))
-keep_prob = tf.placeholder(tf.float32) # probability to keep units
 one_hot_y = tf.one_hot(y, 43)
 
 
@@ -358,6 +319,7 @@ with tf.Session() as sess:
     saver.save(sess, save_file)
     print("Model saved")
 
+# Do evaluation
 with tf.Session() as sess:
     #saver = tf.train.import_meta_graph('model.ckpt.meta')
     saver.restore(sess, tf.train.latest_checkpoint('.'))
@@ -366,3 +328,89 @@ with tf.Session() as sess:
 
     prediction=test_accuracy * len(X_test)
     print("Test Accuracy = {:.3f}".format(test_accuracy))
+
+
+# Step 3: Test a Model on New Images
+# Reinitialize and re-import if starting a new kernel here
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg # mpimg 
+from PIL import Image
+import os
+# %matplotlib inline
+
+import tensorflow as tf
+import numpy as np
+import cv2
+
+
+### Load the images and plot them here.
+### Feel free to use as many code cells as needed.
+fig, axs = plt.subplots(1,5, figsize=(4, 2))
+fig.subplots_adjust(hspace = .2, wspace=.001)
+axs = axs.ravel()
+new_images = []
+
+n_rows = 2
+n_cols = 5
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(15, 6))
+fig.subplots_adjust(hspace=.1, wspace=.001)
+axs = axs.ravel()
+
+
+for i in range(n_cols):
+    file_name = os.path.join(os.path.abspath('.'), 'test_images', str(i+1) + '.png')
+    image = np.asarray(Image.open(file_name).convert('RGB'))
+    image.setflags(write=1)
+    axs[i].axis('off')
+    axs[i].imshow(image)
+    #new_img = preprocess_image(image)
+    #axs[i+n_cols].axis('off')
+    #axs[i+n_cols].imshow(new_img, cmap="Greys_r")
+    #new_images.append(new_img)
+    new_images.append(image)
+#plt.show()
+
+
+
+### Run the predictions here.
+### Feel free to use as many code cells as needed.
+
+new_labels = [14, 13, 4, 35, 33]
+
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    saver = tf.train.import_meta_graph('model.ckpt.meta')
+    saver.restore(sess, tf.train.latest_checkpoint('.'))
+    new_accuracy = evaluate(new_images, new_labels)
+    print("Test Set Accuracy = {:.3f}".format(new_accuracy))
+
+
+
+### Visualize the softmax probabilities here.
+### Feel free to use as many code cells as needed.
+prediction = tf.nn.softmax(logits)
+top_k = tf.nn.top_k(prediction, k=3)
+new_images_pred = np.asarray(new_images)
+with tf.Session() as sess:
+    saver = tf.train.import_meta_graph('model.ckpt.meta')
+    saver.restore(sess, tf.train.latest_checkpoint('.'))
+    new_prediction= sess.run(prediction, feed_dict={x: new_images_pred})
+    new_top_k = sess.run(top_k, feed_dict={x: new_images_pred})
+
+print(new_prediction)
+print(new_top_k)
+
+fig, axs = plt.subplots(5,2, figsize=(9, 19))
+axs = axs.ravel()
+
+for i in range(len(new_prediction)*2):
+    if i%2 == 0:
+        axs[i].axis('off')
+        axs[i].imshow(cv2.cvtColor(new_images[i//2], cv2.COLOR_BGR2RGB))
+    else:
+        axs[i].bar(np.arange(n_classes), new_prediction[(i-1)//2]) 
+        axs[i].set_ylabel('Softmax probability')
+
+fig.show()
+'''
